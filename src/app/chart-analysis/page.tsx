@@ -44,7 +44,7 @@ const agentData = {
   pipelines: [fetchDataPipeline, getDataSetInfoPipeline, genChartsPipeline, transformDataPipeline],
   systemPrompt: systemPrompt,
   dataFetchingConfig: {
-    limitRows: 20
+    limitRows: 200
   },
   maxLLMRows: 100
 };

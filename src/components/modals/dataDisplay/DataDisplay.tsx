@@ -165,7 +165,7 @@ const DataDisplay: React.FC<DataDisplayProps> = ({
             loading={loading}
             size="small"
             pagination={{
-              pageSize: 10,
+              defaultPageSize: 10,
               showTotal: (total) => `Total ${total} records`,
             }}
             scroll={{ x: 'max-content' }}
