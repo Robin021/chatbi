@@ -14,6 +14,45 @@
 - **开发语言**: TypeScript
 - **样式方案**: Tailwind CSS
 
+## Docker 支持
+
+本项目支持通过 Docker 进行部署。
+
+### 使用预构建镜像
+
+```bash
+# 从 Docker Hub 拉取镜像
+docker pull 用户名/chatbi:latest
+
+# 或从 GitHub Container Registry 拉取
+docker pull ghcr.io/用户名/chatbi:latest
+
+# 运行容器
+docker run -p 3000:3000 用户名/chatbi:latest
+```
+
+### 本地构建镜像
+
+```bash
+# 构建镜像
+docker build -t chatbi:local .
+
+# 运行容器
+docker run -p 3000:3000 chatbi:local
+```
+
+### 使用 Docker Compose
+
+```bash
+# 启动服务
+docker-compose up -d
+
+# 停止服务
+docker-compose down
+```
+
+更多关于 Docker 镜像发布的信息，请参阅 [Docker 镜像发布指南](.github/DOCKER_PUBLISH_GUIDE.md)。
+
 ## 系统架构
 
 ### 1. 核心架构设计
