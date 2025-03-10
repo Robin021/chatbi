@@ -14,6 +14,21 @@
 - **开发语言**: TypeScript
 - **样式方案**: Tailwind CSS
 
+## 安全说明
+
+本项目是公开的，但需要注意以下安全事项：
+
+1. **环境变量**：
+   - 不要提交 `.env.local` 文件（已在 `.gitignore` 中排除）
+   - 使用 `.env.example` 作为模板，不包含实际值
+
+2. **敏感信息**：
+   - API 密钥、服务 URL 等敏感信息应存储在 GitHub Secrets 中
+   - 部署时通过 Kubernetes Secrets 管理
+
+3. **安全最佳实践**：
+   - 详细信息请参阅 [安全最佳实践指南](.github/SECURITY_BEST_PRACTICES.md)
+
 ## Docker 支持
 
 本项目支持通过 Docker 进行部署。
@@ -21,14 +36,17 @@
 ### 使用预构建镜像
 
 ```bash
-# 从 Docker Hub 拉取镜像
-docker pull 用户名/chatbi:latest
+# 从阿里云容器镜像服务拉取镜像
+docker pull registry.cn-hangzhou.aliyuncs.com/命名空间/chatbi:latest
 
 # 或从 GitHub Container Registry 拉取
 docker pull ghcr.io/用户名/chatbi:latest
 
+# 或从 Docker Hub 拉取
+docker pull 用户名/chatbi:latest
+
 # 运行容器
-docker run -p 3000:3000 用户名/chatbi:latest
+docker run -p 3000:3000 registry.cn-hangzhou.aliyuncs.com/命名空间/chatbi:latest
 ```
 
 ### 本地构建镜像
@@ -52,6 +70,35 @@ docker-compose down
 ```
 
 更多关于 Docker 镜像发布的信息，请参阅 [Docker 镜像发布指南](.github/DOCKER_PUBLISH_GUIDE.md)。
+
+## Kubernetes 部署
+
+本项目支持部署到 Kubernetes 集群，特别是 Amazon EKS。
+
+### Amazon EKS 部署
+
+我们提供了完整的 EKS 部署配置和脚本：
+
+```bash
+# 快速部署到 EKS，使用阿里云容器镜像服务
+./k8s/eks/deploy.sh production v1.0.0 aliyun
+
+# 或使用 GitHub Container Registry
+./k8s/eks/deploy.sh production v1.0.0 ghcr
+
+# 或使用 Docker Hub
+./k8s/eks/deploy.sh production v1.0.0 dockerhub
+```
+
+部署配置包括：
+- Deployment（应用部署）
+- Service（服务暴露）
+- Ingress（入口配置）
+- HPA（自动扩展）
+- ConfigMap（配置管理）
+- Secret（敏感信息）
+
+详细的部署说明请参阅 [EKS 部署指南](k8s/eks/README.md)。
 
 ## 系统架构
 

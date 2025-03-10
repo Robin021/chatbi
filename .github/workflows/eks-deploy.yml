@@ -1,0 +1,164 @@
+name: 部署到 Amazon EKS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '部署环境'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      image_tag:
+        description: '镜像标签'
+        required: true
+        default: 'latest'
+      registry:
+        description: '镜像仓库'
+        required: true
+        default: 'aliyun'
+        type: choice
+        options:
+          - aliyun
+          - ghcr
+          - dockerhub
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  AWS_REGION: cn-north-1  # 替换为您的 AWS 区域
+  EKS_CLUSTER_NAME: your-eks-cluster  # 替换为您的 EKS 集群名称
+  NAMESPACE: chatbi
+  # 镜像仓库配置
+  GHCR_REGISTRY: ghcr.io
+  GHCR_USERNAME: ${{ github.repository_owner }}
+  ALIYUN_REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  ALIYUN_NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}
+  DOCKERHUB_REGISTRY: docker.io
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  deploy:
+    name: 部署到 EKS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 设置镜像标签
+        id: set-tag
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "IMAGE_TAG=${TAG}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_ENV
+          fi
+          echo "使用镜像标签: ${{ env.IMAGE_TAG }}"
+
+      - name: 设置环境
+        id: set-env
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+            echo "REGISTRY=aliyun" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+            echo "REGISTRY=${{ github.event.inputs.registry }}" >> $GITHUB_ENV
+          fi
+          echo "部署到环境: ${{ env.ENVIRONMENT }}"
+          echo "使用镜像仓库: ${{ env.REGISTRY }}"
+          
+          # 根据选择的镜像仓库设置变量
+          if [[ "${{ env.REGISTRY }}" == "aliyun" ]]; then
+            echo "DOCKER_REGISTRY=${{ env.ALIYUN_REGISTRY }}" >> $GITHUB_ENV
+            echo "DOCKER_USERNAME=${{ env.ALIYUN_NAMESPACE }}" >> $GITHUB_ENV
+            echo "DOCKER_PASSWORD=${{ secrets.ALIYUN_PASSWORD }}" >> $GITHUB_ENV
+          elif [[ "${{ env.REGISTRY }}" == "ghcr" ]]; then
+            echo "DOCKER_REGISTRY=${{ env.GHCR_REGISTRY }}" >> $GITHUB_ENV
+            echo "DOCKER_USERNAME=${{ env.GHCR_USERNAME }}" >> $GITHUB_ENV
+            echo "DOCKER_PASSWORD=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          else
+            echo "DOCKER_REGISTRY=${{ env.DOCKERHUB_REGISTRY }}" >> $GITHUB_ENV
+            echo "DOCKER_USERNAME=${{ env.DOCKERHUB_USERNAME }}" >> $GITHUB_ENV
+            echo "DOCKER_PASSWORD=${{ secrets.DOCKERHUB_TOKEN }}" >> $GITHUB_ENV
+          fi
+
+      - name: 配置 AWS 凭证
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 更新 kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: 安装 kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: 安装 kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: 准备部署文件
+        run: |
+          mkdir -p .deploy
+          cp -r k8s/eks/* .deploy/
+          find .deploy -type f -name "*.yaml" -exec sed -i "s|\${DOCKER_REGISTRY}|${{ env.DOCKER_REGISTRY }}|g; s|\${DOCKER_USERNAME}|${{ env.DOCKER_USERNAME }}|g; s|\${IMAGE_TAG}|${{ env.IMAGE_TAG }}|g; s|\${ENV}|${{ env.ENVIRONMENT }}|g" {} \;
+
+      - name: 创建命名空间
+        run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: 创建 Docker 仓库密钥
+        run: |
+          kubectl create secret docker-registry docker-registry-secret \
+            --docker-server=${{ env.DOCKER_REGISTRY }} \
+            --docker-username=${{ env.DOCKER_USERNAME }} \
+            --docker-password=${{ env.DOCKER_PASSWORD }} \
+            --docker-email=${{ github.actor }}@users.noreply.github.com \
+            -n ${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: 创建环境变量 Secret
+        run: |
+          # 创建包含环境变量的 Secret
+          cat << EOF > .deploy/env-secret-values.yaml
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: chatbi-env
+            namespace: ${{ env.NAMESPACE }}
+          type: Opaque
+          data:
+            NEXT_PUBLIC_POCKETBASE_URL: "$(echo -n "${{ secrets.POCKETBASE_URL }}" | base64 -w 0)"
+            ONEAPI_API_BASE_URL: "$(echo -n "${{ secrets.ONEAPI_API_BASE_URL }}" | base64 -w 0)"
+            ONEAPI_API_KEY: "$(echo -n "${{ secrets.ONEAPI_API_KEY }}" | base64 -w 0)"
+            ONEAPI_MODEL: "$(echo -n "${{ secrets.ONEAPI_MODEL }}" | base64 -w 0)"
+          EOF
+          
+          # 应用 Secret
+          kubectl apply -f .deploy/env-secret-values.yaml
+          # 删除临时文件
+          rm .deploy/env-secret-values.yaml
+
+      - name: 部署到 EKS
+        run: |
+          kubectl apply -k .deploy/
+          kubectl rollout status deployment/chatbi -n ${{ env.NAMESPACE }} --timeout=300s
+
+      - name: 获取服务信息
+        run: |
+          echo "部署完成！服务信息:"
+          kubectl get svc,ing -n ${{ env.NAMESPACE }}
+
+      - name: 清理临时文件
+        run: rm -rf .deploy 
