@@ -229,8 +229,8 @@ const generateChartConfig = async (chartType: ChartType, data: any[], query: str
         
         if (error instanceof ChartError || error instanceof Error) {
             const message = lang === 'cn'
-                ? `图表生成失败: ${error.message}`
-                : `Chart generation failed: ${error.message}`;
+                ? `此类数据不适合这种图表的展示，请尝试使用其他图表类型`
+                : `This data is not suitable for this chart type, please try another chart type`;
             throw new Error(message);
         }
         
