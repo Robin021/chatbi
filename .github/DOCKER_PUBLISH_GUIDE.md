@@ -29,6 +29,22 @@
    - 名称：`DOCKERHUB_USERNAME`，值：你的 Docker Hub 用户名
    - 名称：`DOCKERHUB_TOKEN`，值：之前生成的 Docker Hub 访问令牌
 
+## 依赖项管理
+
+### 已知问题
+
+项目需要 `@ant-design/icons` 包才能成功构建。我们已经通过以下方式解决了这个问题：
+
+1. 在 `package.json` 中添加了 `@ant-design/icons` 依赖
+2. 在 Dockerfile 中添加了额外的安装步骤
+3. 在 GitHub Actions 工作流中添加了依赖检查
+
+如果您遇到类似的依赖问题，可以：
+
+1. 确保所有必要的依赖都在 `package.json` 中列出
+2. 检查 TypeScript 类型声明是否完整
+3. 如果需要，在 Dockerfile 中添加额外的安装步骤
+
 ## 发布流程
 
 ### 自动发布
@@ -102,5 +118,6 @@ docker run -p 3000:3000 {你的Docker用户名}/chatbi:latest
 2. Docker Hub 访问令牌是否有效且具有足够权限
 3. Dockerfile 是否位于仓库根目录
 4. 构建过程中是否有错误
+5. 依赖项是否完整，特别是 `@ant-design/icons` 是否已安装
 
 可以在 GitHub 仓库的 "Actions" 选项卡中查看工作流运行日志，以获取更详细的错误信息。 

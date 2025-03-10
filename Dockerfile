@@ -14,6 +14,9 @@ RUN npm install -g pnpm && pnpm install
 # 复制源代码
 COPY . .
 
+# 安装缺失的依赖
+RUN pnpm add @ant-design/icons
+
 # 构建应用
 RUN pnpm build
 
