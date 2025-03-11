@@ -2,8 +2,8 @@ import PocketBase, { AuthRecord } from "pocketbase";
 
 
 // Initialize the PocketBase client
-// const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL as string);
-const pb = new PocketBase('http://54.222.196.102:3000');
+const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL as string);
+
 
 
 pb.autoCancellation(false);

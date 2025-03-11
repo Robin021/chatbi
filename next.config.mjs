@@ -12,6 +12,9 @@ const nextConfig = {
       }
       return config;
     },
+    env: {
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL, // 动态读取环境变量
+    },
     experimental: {
       serverComponentsExternalPackages: ['sequelize', 'mysql2']
     }
