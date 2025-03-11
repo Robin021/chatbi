@@ -17,12 +17,6 @@ COPY . .
 # 安装缺失的依赖
 RUN pnpm add @ant-design/icons
 
-# 构建应用（只使用默认 API 但不硬编码）
-RUN NEXT_PUBLIC_API_URL=https://default-url.com \
-    ONEAPI_API_BASE_URL=https://default-oneapi.com \
-    ONEAPI_MODEL=qwen-turbo \
-    pnpm build
-
 # 构建应用
 RUN pnpm build
 
@@ -33,6 +27,12 @@ WORKDIR /app
 
 # 设置环境变量
 ENV NODE_ENV=production
+
+# 构建应用（只使用默认 API 但不硬编码）
+RUN NEXT_PUBLIC_API_URL=https://default-url.com \
+    ONEAPI_API_BASE_URL=https://default-oneapi.com \
+    ONEAPI_MODEL=qwen-turbo \
+    pnpm build
 
 # 复制必要的文件
 COPY --from=builder /app/next.config.mjs ./
@@ -46,4 +46,4 @@ EXPOSE 3000
 
 # 启动应用
 # CMD ["npm", "start"] 
-CMD ["sh", "-c", "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL ONEAPI_API_BASE_URL=$ONEAPI_API_BASE_URL ONEAPI_API_KEY=$ONEAPI_API_KEY ONEAPI_MODEL=$ONEAPI_MODEL pnpm start"]
+CMD ["sh", "-c", "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL ONEAPI_API_BASE_URL=$ONEAPI_API_BASE_URL ONEAPI_API_KEY=$ONEAPI_API_KEY ONEAPI_MODEL=$ONEAPI_MODEL npm start"]
