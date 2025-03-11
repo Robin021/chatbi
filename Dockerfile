@@ -17,6 +17,9 @@ COPY . .
 
 # 安装缺失的依赖
 RUN pnpm add @ant-design/icons
+# 构建时设置默认环境变量（但可被 Docker 构建参数覆盖）
+
+ENV NEXT_PUBLIC_API_URL=http://54.222.196.102:3000
 
 # 构建应用
 RUN pnpm build
@@ -28,10 +31,8 @@ WORKDIR /app
 
 # 设置环境变量
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=http://54.222.196.102:3000
 
-# 构建时设置默认环境变量（但可被 Docker 构建参数覆盖）
-ARG NEXT_PUBLIC_API_URL=https://default-url.com
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # 复制必要的文件
 COPY --from=builder /app/next.config.mjs ./
