@@ -106,7 +106,7 @@ export const LLMForm: React.FC<LLMFormProps> = ({ llm, onClose, onRefresh }) => 
                 { type: "url", message: "Please enter a valid URL!" },
               ]}
             >
-              <Input addonBefore="https://" placeholder="api.openai.com/v1" />
+              <Input addonBefore="" placeholder="https://api.openai.com/v1" />
             </Form.Item>
           </Col>
         </Row>
