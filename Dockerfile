@@ -14,9 +14,6 @@ RUN npm install -g pnpm && pnpm install
 # 复制源代码
 COPY . .
 
-# 构建时设置默认环境变量（但可被 Docker 构建参数覆盖）
-ARG NEXT_PUBLIC_API_URL=https://default-url.com
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # 安装缺失的依赖
 RUN pnpm add @ant-design/icons
@@ -32,6 +29,9 @@ WORKDIR /app
 # 设置环境变量
 ENV NODE_ENV=production
 
+# 构建时设置默认环境变量（但可被 Docker 构建参数覆盖）
+ARG NEXT_PUBLIC_API_URL=https://default-url.com
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # 复制必要的文件
 COPY --from=builder /app/next.config.mjs ./
@@ -44,5 +44,5 @@ COPY --from=builder /app/package.json ./package.json
 EXPOSE 3000
 
 # 启动应用
-# CMD ["npm", "start"] 
-CMD ["sh", "-c", "NODE_ENV=production NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL npm start"]
+CMD ["npm", "start"] 
+# CMD ["sh", "-c", "NODE_ENV=production NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL npm start"]
