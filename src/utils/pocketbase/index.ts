@@ -1,4 +1,5 @@
 import PocketBase, { AuthRecord } from "pocketbase";
+import { debugLog, debugError } from "@/utils/debug";
 
 
 // Initialize the PocketBase client
@@ -30,9 +31,15 @@ export const loginWithOAuth = async (
       provider,
       redirectUrl: window.location.origin + "/login",
     });
+    
+    debugLog('用户登录信息', {
+      token: authData.token,
+      user: authData.record
+    });
+    
     return authData;
   } catch (error) {
-    console.error("Login failed:", error);
+    debugError("登录失败", error);
     throw new Error("Authentication failed");
   }
 };

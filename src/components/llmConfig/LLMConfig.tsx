@@ -9,7 +9,11 @@ import { LoadingButton } from '../ui/LoadingButton';
 
 const { Text } = Typography;
 
-const LLMConfig: React.FC = () => {
+interface LLMConfigProps {
+  disabled?: boolean;
+}
+
+const LLMConfig: React.FC<LLMConfigProps> = ({ disabled = false }) => {
   const [llms, setLlms] = useState<LLMRecord[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentLLM, setCurrentLLM] = useState<LLMRecord | null>(null);
@@ -57,23 +61,63 @@ const LLMConfig: React.FC = () => {
   };
 
   return (
-    <Card title="LLM Configuration" extra={<Button type='primary' onClick={() => showModal()}>Add LLM</Button>} style={{width: '80%'}}>
+    <Card 
+      title="LLM Configuration" 
+      extra={
+        <Button 
+          type='primary' 
+          onClick={() => showModal()} 
+          disabled={disabled}
+        >
+          Add LLM
+        </Button>
+      } 
+      style={{width: '80%'}}
+    >
       <List
         dataSource={llms}
         renderItem={item => (
           <List.Item
             actions={[
-              <Button key={item.id} onClick={() => showModal(item)}>Edit</Button>,
-              <Button key={item.id} danger onClick={() => handleDelete(item.id)}>Delete</Button>,
-              <LoadingButton key={item.id} onClick={() => testConnection(item)}>Test Connection</LoadingButton>
+              <Button 
+                key={item.id} 
+                onClick={() => showModal(item)}
+                disabled={disabled}
+              >
+                Edit
+              </Button>,
+              <Button 
+                key={item.id} 
+                danger 
+                onClick={() => handleDelete(item.id)}
+                disabled={disabled}
+              >
+                Delete
+              </Button>,
+              <LoadingButton 
+                key={item.id} 
+                onClick={() => testConnection(item)}
+              >
+                Test Connection
+              </LoadingButton>
             ]}
           >
             <Text strong>{item.model}</Text>
           </List.Item>
         )}
       />
-      <Modal title={currentLLM ? "Edit LLM" : "Add LLM"} open={isModalVisible} onCancel={handleModalClose} footer={null}>
-        <LLMForm llm={currentLLM} onClose={handleModalClose} onRefresh={refreshLLMs} />
+      <Modal 
+        title={currentLLM ? "Edit LLM" : "Add LLM"} 
+        open={isModalVisible} 
+        onCancel={handleModalClose} 
+        footer={null}
+      >
+        <LLMForm 
+          llm={currentLLM} 
+          onClose={handleModalClose} 
+          onRefresh={refreshLLMs}
+          disabled={disabled}
+        />
       </Modal>
     </Card>
   );

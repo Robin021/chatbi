@@ -25,30 +25,31 @@ import type { LLMRecord } from "@/utils/pocketbase/collections/type"
 import { llmController } from "@/utils/pocketbase/collections/llmController"
 import { getAuthenticatedUser } from "@/utils/pocketbase"
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 interface LLMFormProps {
   llm?: LLMRecord | null
   onClose: () => void
   onRefresh: () => void
+  disabled?: boolean
 }
 
 const commonModels = [
   { value: "gpt-4o-mini" },
   { value: "deepseek-v3" },
   { value: "deepseek-r1" },
+  { value: "Qwen/QwQ-32B" },
   { value: "qwen-turbo" },
   { value: "qwen-max" },
 ]
 
-export const LLMForm: React.FC<LLMFormProps> = ({ llm, onClose, onRefresh }) => {
+export const LLMForm: React.FC<LLMFormProps> = ({ llm, onClose, onRefresh, disabled = false }) => {
   const [form] = Form.useForm()
 
   const onFinish = async (values: LLMRecord) => {
     if (llm) {
       await llmController.update(llm.id, values)
     } else {
-
       const userId = getAuthenticatedUser()?.id
       if (!userId) throw 'Not logged in'
       await llmController.create({...values, owner: [userId]})
@@ -58,7 +59,14 @@ export const LLMForm: React.FC<LLMFormProps> = ({ llm, onClose, onRefresh }) => 
   }
 
   return (
-      <Form form={form} layout="vertical" onFinish={onFinish} initialValues={llm || {}} requiredMark="optional">
+      <Form 
+        form={form} 
+        layout="vertical" 
+        onFinish={onFinish} 
+        initialValues={llm || {}} 
+        requiredMark="optional"
+        disabled={disabled}
+      >
         <Row gutter={16}>
           <Col span={24}>
             <Form.Item
@@ -136,16 +144,20 @@ export const LLMForm: React.FC<LLMFormProps> = ({ llm, onClose, onRefresh }) => 
         </Row>
 
         <Form.Item>
-          <Button type="primary" icon={<SaveOutlined />} htmlType="submit" block>
+          <Button 
+            type="primary" 
+            icon={<SaveOutlined />} 
+            htmlType="submit" 
+            block
+            disabled={disabled}
+          >
             {llm ? "Update LLM Configuration" : "Create LLM Configuration"}
           </Button>
         </Form.Item>
         <Text type="secondary">
-        Note: Ensure you have the necessary permissions to use the selected model and API key.
-      </Text>
+          Note: Ensure you have the necessary permissions to use the selected model and API key.
+        </Text>
       </Form>
-
-     
   )
 }
 

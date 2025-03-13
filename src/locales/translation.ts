@@ -39,6 +39,14 @@ const translation = {
       }
     }
   },
+  user: {
+    llm: {
+      noAccess: {
+        cn: '暂时无法配置大模型，配置请联系管理员',
+        en: 'LLM configuration is not available. Please contact administrator for access.'
+      }
+    }
+  },
   database: {
     generateSQL: {
       button: {
