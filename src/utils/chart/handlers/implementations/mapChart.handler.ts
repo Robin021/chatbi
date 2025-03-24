@@ -44,17 +44,15 @@ export class MapChartHandler extends BaseChartHandler {
             return { valid: true };
         }
 
-        // 检查是否可以转换为标准格式
-        const possibleNameFields = ['name', 'region', 'area', 'country', 'province'];
-        const possibleValueFields = ['value', 'count', 'amount', 'total', 'active_users'];
-        
-        const hasNameField = possibleNameFields.some(field => field in firstItem);
-        const hasValueField = possibleValueFields.some(field => field in firstItem);
+        // 检查是否至少有一个字符串字段和一个数值字段
+        const fields = Object.keys(firstItem);
+        const hasStringField = fields.some(field => typeof firstItem[field] === 'string');
+        const hasNumberField = fields.some(field => typeof firstItem[field] === 'number');
 
-        if (!hasNameField || !hasValueField) {
+        if (!hasStringField || !hasNumberField) {
             return {
                 valid: false,
-                message: '数据必须包含地区名称字段（name/region/area/country/province）和值字段（value/count/amount/total）'
+                message: '数据必须至少包含一个文本字段（用于地区名称）和一个数值字段（用于展示值）'
             };
         }
 
@@ -82,7 +80,7 @@ export class MapChartHandler extends BaseChartHandler {
             const valueField = this.findValueField(data);
 
             if (!nameField || !valueField) {
-                throw new Error('无法确定区域名称字段或值字段');
+                throw new Error('无法确定地区名称字段或值字段，请确保数据中包含文本字段和数值字段');
             }
 
             // 转换数据为标准格式
@@ -114,62 +112,107 @@ export class MapChartHandler extends BaseChartHandler {
 
     private findNameField(data: any[]): string | null {
         const firstItem = data[0];
-        const possibleNameFields = ['name', 'region', 'area', 'country', 'province'];
-        
-        // 首先检查常见的字段名
-        for (const field of possibleNameFields) {
-            if (field in firstItem) {
-                return field;
-            }
-        }
-        
-        // 如果没有找到常见字段名，查找包含这些关键词的字段
-        const nameKeywords = ['name', 'region', 'area', 'country', 'province', 'city', 'state', 'location'];
         const fields = Object.keys(firstItem);
-        const matchingField = fields.find(field => 
-            nameKeywords.some(keyword => 
-                field.toLowerCase().includes(keyword.toLowerCase())
-            )
-        );
         
-        if (matchingField) {
-            return matchingField;
+        // 首先找到所有字符串类型的字段
+        const stringFields = fields.filter(field => typeof firstItem[field] === 'string');
+        
+        if (stringFields.length === 0) {
+            return null;
         }
 
-        // 最后尝试找到任何字符串类型的字段
-        return fields.find(key => 
-            typeof firstItem[key] === 'string'
-        ) || null;
+        // 如果只有一个字符串字段，直接使用
+        if (stringFields.length === 1) {
+            return stringFields[0];
+        }
+
+        // 如果有多个字符串字段，尝试找到最合适的
+        // 1. 优先使用已经标准化的name字段
+        if (stringFields.includes('name')) {
+            return 'name';
+        }
+
+        // 2. 分析每个字段的内容特征，找到最可能是地区名称的字段
+        const fieldScores = new Map<string, number>();
+        
+        for (const field of stringFields) {
+            let score = 0;
+            const sampleValues = data.slice(0, 5).map(item => String(item[field]).toLowerCase());
+            
+            // 检查是否包含典型的地区名称特征
+            const hasTypicalNames = sampleValues.some(value => 
+                /^(北京|上海|广东|california|new york|london|tokyo)/i.test(value)
+            );
+            if (hasTypicalNames) score += 3;
+            
+            // 检查字段名是否包含地区相关词
+            const fieldNameLower = field.toLowerCase();
+            if (/region|area|country|province|city|state|location/i.test(fieldNameLower)) {
+                score += 2;
+            }
+            
+            // 检查值的长度是否在合理范围（地区名称通常不会太长）
+            const avgLength = sampleValues.reduce((sum, val) => sum + val.length, 0) / sampleValues.length;
+            if (avgLength >= 2 && avgLength <= 20) score += 1;
+            
+            fieldScores.set(field, score);
+        }
+
+        // 返回得分最高的字段
+        return Array.from(fieldScores.entries())
+            .sort((a, b) => b[1] - a[1])[0][0];
     }
 
     private findValueField(data: any[]): string | null {
         const firstItem = data[0];
-        const possibleValueFields = ['value', 'count', 'amount', 'total', 'active_users', 'number', 'quantity'];
-        
-        // 首先检查常见的字段名
-        for (const field of possibleValueFields) {
-            if (field in firstItem && typeof firstItem[field] === 'number') {
-                return field;
-            }
-        }
-        
-        // 如果没有找到常见字段名，查找包含这些关键词的字段
-        const valueKeywords = ['value', 'count', 'amount', 'total', 'number', 'quantity', 'sum'];
         const fields = Object.keys(firstItem);
-        const matchingField = fields.find(field => 
-            valueKeywords.some(keyword => 
-                field.toLowerCase().includes(keyword.toLowerCase())
-            ) && typeof firstItem[field] === 'number'
-        );
         
-        if (matchingField) {
-            return matchingField;
+        // 首先找到所有数值类型的字段
+        const numberFields = fields.filter(field => typeof firstItem[field] === 'number');
+        
+        if (numberFields.length === 0) {
+            return null;
         }
 
-        // 最后尝试找到任何数值类型的字段
-        return fields.find(key => 
-            typeof firstItem[key] === 'number'
-        ) || null;
+        // 如果只有一个数值字段，直接使用
+        if (numberFields.length === 1) {
+            return numberFields[0];
+        }
+
+        // 如果有多个数值字段，尝试找到最合适的
+        // 1. 优先使用已经标准化的value字段
+        if (numberFields.includes('value')) {
+            return 'value';
+        }
+
+        // 2. 分析每个字段的数值特征，找到最可能是展示值的字段
+        const fieldScores = new Map<string, number>();
+        
+        for (const field of numberFields) {
+            let score = 0;
+            const values = data.map(item => Number(item[field]));
+            
+            // 检查数值范围是否合理（排除可能是id、年份等的字段）
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            if (min >= 0 && max < 1000000) score += 2;
+            
+            // 检查是否有小数（通常计数类的数据是整数）
+            const hasDecimals = values.some(v => v % 1 !== 0);
+            if (!hasDecimals) score += 1;
+            
+            // 检查字段名是否包含数值相关词
+            const fieldNameLower = field.toLowerCase();
+            if (/count|amount|total|number|quantity|sum|metric/i.test(fieldNameLower)) {
+                score += 2;
+            }
+            
+            fieldScores.set(field, score);
+        }
+
+        // 返回得分最高的字段
+        return Array.from(fieldScores.entries())
+            .sort((a, b) => b[1] - a[1])[0][0];
     }
 
     getEncode(dimensions: string[]) {
